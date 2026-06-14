@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regex Validation Tests - Campus Life Planner</title>
+    <link rel="stylesheet" href="styles/test.css">
+</head>
+<body>
+    <div class="container">
+        <h1> Regex Validation Test Suite</h1>
+        <p class="subtitle"> Forms & Regex Validation of Campus Life Planner</p>
+        
+        <div id="testResults"></div>
+        
+        <div class="summary" id="summary">
+            <h3>Running tests...</h3>
+        </div>
+        
+        <button onclick="location.reload()"> Run Tests Again</button>
+        <hr>
+        <p><strong> Regex Catalog (5 rules + 1 advanced):</strong></p>
+        <ul style="margin-left: 20px; margin-top: 10px;">
+            <li><strong>Title:</strong> <code>/^\S(?:.*\S)?$/</code> - No leading/trailing spaces</li>
+            <li><strong>Duration:</strong> <code>/^(0|[1-9]\d*)(\.\d{1,2})?$/</code> - Positive number, optional 2 decimals</li>
+            <li><strong>Date:</strong> <code>/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/</code> - YYYY-MM-DD format</li>
+            <li><strong>Tag:</strong> <code>/^[A-Za-z]+(?:[ -][A-Za-z]+)*$/</code> - Letters, spaces, hyphens only</li>
+            <li><strong>Description:</strong> <code>/^[\w\s.,!?\-':;()]+$/</code> - Safe punctuation only</li>
+            <li><strong>Advanced (Back-reference):</strong> <code>/\b(\w+)\s+\1\b/i</code> - Detects duplicate words</li>
+        </ul>
+    </div>
+
+    <script type="module">
+        import { 
+            validateTitle, 
+            validateDuration, 
+            validateDate, 
+            validateTag, 
+            validateDescription,
+            hasDuplicateWords 
+        } from './scripts/validators.js';
+        
+        const tests = [
+            // Title tests
+            { name: "Title - Valid: 'Study Session'", fn: () => validateTitle("Study Session"), expected: true },
+            { name: "Title - Valid: 'A' (3 chars min fails though)", fn: () => validateTitle("A"), expected: false },
+            { name: "Title - Invalid: leading space", fn: () => validateTitle(" Study"), expected: false },
+            { name: "Title - Invalid: trailing space", fn: () => validateTitle("Study "), expected: false },
+            { name: "Title - Invalid: empty string", fn: () => validateTitle(""), expected: false },
+            
+            // Duration tests
+            { name: "Duration - Valid: 90", fn: () => validateDuration("90"), expected: true },
+            { name: "Duration - Valid: 90.50", fn: () => validateDuration("90.50"), expected: true },
+            { name: "Duration - Valid: 0.5", fn: () => validateDuration("0.5"), expected: true },
+            { name: "Duration - Invalid: -5", fn: () => validateDuration("-5"), expected: false },
+            { name: "Duration - Invalid: abc", fn: () => validateDuration("abc"), expected: false },
+            { name: "Duration - Invalid: 90.123 (3 decimals)", fn: () => validateDuration("90.123"), expected: false },
+            
+            // Date tests
+            { name: "Date - Valid: 2025-09-29", fn: () => validateDate("2025-09-29"), expected: true },
+            { name: "Date - Valid: 2024-02-29 (leap year)", fn: () => validateDate("2024-02-29"), expected: true },
+            { name: "Date - Invalid: 2025-02-30", fn: () => validateDate("2025-02-30"), expected: false },
+            { name: "Date - Invalid: 2025-13-01", fn: () => validateDate("2025-13-01"), expected: false },
+            { name: "Date - Invalid: 25-09-29", fn: () => validateDate("25-09-29"), expected: false },
+            
+            // Tag tests
+            { name: "Tag - Valid: 'Study'", fn: () => validateTag("Study"), expected: true },
+            { name: "Tag - Valid: 'Exam Prep'", fn: () => validateTag("Exam Prep"), expected: true },
+            { name: "Tag - Valid: 'Group-Meeting'", fn: () => validateTag("Group-Meeting"), expected: true },
+            { name: "Tag - Invalid: contains number 'Study123'", fn: () => validateTag("Study123"), expected: false },
+            { name: "Tag - Invalid: contains @ symbol", fn: () => validateTag("Study@"), expected: false },
+            { name: "Tag - Invalid: single char 'A'", fn: () => validateTag("A"), expected: false },
+            
+            // Description tests (optional)
+            { name: "Description - Valid: empty", fn: () => validateDescription(""), expected: true },
+            { name: "Description - Valid: normal text", fn: () => validateDescription("Study chapter 4"), expected: true },
+            { name: "Description - Valid: with punctuation", fn: () => validateDescription("Let's study! Ready?"), expected: true },
+            
+            // Advanced regex - duplicate words
+            { name: "Advanced - No duplicates: 'study hard'", fn: () => hasDuplicateWords("study hard"), expected: false },
+            { name: "Advanced - Duplicate found: 'study study'", fn: () => hasDuplicateWords("study study"), expected: true },
+            { name: "Advanced - Duplicate found: 'meeting meeting at 2pm'", fn: () => hasDuplicateWords("meeting meeting at 2pm"), expected: true },
+            { name: "Advanced - Case insensitive: 'Study study'", fn: () => hasDuplicateWords("Study study"), expected: true },
+            { name: "Advanced - No duplicate: empty string", fn: () => hasDuplicateWords(""), expected: false },
+        ];
+        
+        function runTests() {
+            let passed = 0;
+            let failed = 0;
+            const results = [];
+            
+            tests.forEach((test, index) => {
+                try {
+                    const result = test.fn();
+                    const isPass = result === test.expected;
+                    if (isPass) passed++;
+                    else failed++;
+                    
+                    results.push(`
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${test.name}</td>
+                            <td class="${isPass ? 'pass' : 'fail'}">${isPass ? '✓ PASS' : '✗ FAIL'}</td>
+                            <td>Got: ${result}, Expected: ${test.expected}</td>
+                        </tr>
+                    `);
+                } catch (error) {
+                    failed++;
+                    results.push(`
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${test.name}</td>
+                            <td class="fail">✗ ERROR</td>
+                            <td>${error.message}</td>
+                        </tr>
+                    `);
+                }
+            });
+            
+            const total = tests.length;
+            const passRate = ((passed / total) * 100).toFixed(1);
+            
+            const html = `
+                <div class="test-group">
+                    <h2> Test Results <span class="badge">${passed}/${total} passed</span></h2>
+                    <table>
+                        <thead>
+                            <tr><th>#</th><th>Test Name</th><th>Status</th><th>Details</th></tr>
+                        </thead>
+                        <tbody>
+                            ${results.join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById("testResults").innerHTML = html;
+            document.getElementById("summary").innerHTML = `
+                <h3>${passRate}% Pass Rate</h3>
+                <p> ${passed} passed |  ${failed} failed |  ${total} total tests</p>
+                <p style="margin-top: 10px; font-size: 0.9rem;">
+                    ${passed === total ? ' All regex validations working correctly! Milestone 3 complete.' : 'Some tests failed. Check regex patterns.'}
+                </p>
+            `;
+        }
+        
+        runTests();
+    </script>
+</body>
+</html>
