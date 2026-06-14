@@ -85,3 +85,7 @@ export function getSortIndicator(field) {
 export function generateId() {
   return "evt_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
 }
+export function getWeeklyTarget() {
+  const saved = localStorage.getItem("weeklyTarget");
+  return saved ? parseInt(saved) : 0;
+}
