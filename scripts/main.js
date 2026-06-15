@@ -29,31 +29,17 @@ function handleSubmit(e) {
   const validation = validateAll(title, duration, date, tag, description);
   
   document.getElementById("titleError").innerHTML = validation.title ? "" : "No leading/trailing spaces (min 3 chars)";
-  document.getElementById("durationError").innerHTML = validation.duration ? "" : "Positive number required (e.g., 90 or 90.5)";
+  document.getElementById("durationError").innerHTML = validation.duration ? "" : "Positive number required";
   document.getElementById("dateError").innerHTML = validation.date ? "" : "Valid YYYY-MM-DD date required";
-  document.getElementById("tagError").innerHTML = validation.tag ? "" : "Letters, spaces, hyphens only (min 2 chars)";
+  document.getElementById("tagError").innerHTML = validation.tag ? "" : "Letters, spaces, hyphens only";
   
   if (hasDuplicateWords(description)) {
-    const warningMsg = " Advanced regex: Duplicate words detected in description";
     const liveAlert = document.getElementById("liveAlert");
-    liveAlert.innerHTML = warningMsg;
-    liveAlert.style.background = "#fef3c7";
-    setTimeout(() => {
-      if (liveAlert.innerHTML === warningMsg) {
-        liveAlert.innerHTML = "";
-        liveAlert.style.background = "";
-      }
-    }, 3000);
+    liveAlert.innerHTML = " Duplicate words detected in description";
+    setTimeout(() => { if (liveAlert.innerHTML.includes("Duplicate")) liveAlert.innerHTML = ""; }, 3000);
   }
   
-  if (!validation.allValid) {
-    const firstError = document.querySelector(".error-message:not(:empty)");
-    if (firstError) {
-      firstError.setAttribute("role", "alert");
-      setTimeout(() => firstError.removeAttribute("role"), 500);
-    }
-    return;
-  }
+  if (!validation.allValid) return;
   
   const now = new Date().toISOString();
   const record = {
@@ -81,13 +67,7 @@ function handleSubmit(e) {
   
   const liveAlert = document.getElementById("liveAlert");
   liveAlert.innerHTML = " Event saved successfully!";
-  liveAlert.setAttribute("role", "status");
-  setTimeout(() => {
-    if (liveAlert.innerHTML === " Event saved successfully!") {
-      liveAlert.innerHTML = "";
-      liveAlert.removeAttribute("role");
-    }
-  }, 2000);
+  setTimeout(() => { if (liveAlert.innerHTML === " Event saved successfully!") liveAlert.innerHTML = ""; }, 2000);
 }
 
 function handleEdit(id) {
@@ -107,7 +87,7 @@ function handleEdit(id) {
 function cancelEdit() {
   editingId = null;
   document.getElementById("eventForm").reset();
-  document.getElementById("submitBtn").innerText = " Add Event";
+  document.getElementById("submitBtn").innerText = "➕ Add Event";
   document.getElementById("cancelEditBtn").style.display = "none";
 }
 
@@ -124,9 +104,13 @@ function handleExport() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `campus_planner_${new Date().toISOString().slice(0,19)}.json`;
+  a.download = `campus_planner_${new Date().toISOString().slice(0, 19)}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  
+  const liveAlert = document.getElementById("liveAlert");
+  liveAlert.innerHTML = " Data exported!";
+  setTimeout(() => { if (liveAlert.innerHTML === " Data exported!") liveAlert.innerHTML = ""; }, 2000);
 }
 
 function handleImport(file) {
@@ -137,10 +121,8 @@ function handleImport(file) {
       setAllRecords(imported);
       refreshUI();
       const liveAlert = document.getElementById("liveAlert");
-      liveAlert.innerHTML = " Import successful!";
-      setTimeout(() => {
-        if (liveAlert.innerHTML === "Import successful!") liveAlert.innerHTML = "";
-      }, 2000);
+      liveAlert.innerHTML = `Imported ${imported.length} records!`;
+      setTimeout(() => { if (liveAlert.innerHTML.includes("Imported")) liveAlert.innerHTML = ""; }, 3000);
     } catch (err) {
       alert("Import failed: " + err.message);
     }
@@ -154,10 +136,35 @@ function loadSeed() {
     { id: generateId(), title: "Group Project Meeting", description: "Discuss UI design and split tasks", duration: 90, date: "2026-06-18", tag: "Meeting", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     { id: generateId(), title: "Gym Session", description: "Cardio and strength training", duration: 60, date: "2026-06-17", tag: "Health", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     { id: generateId(), title: "Library Study", description: "Finish programming assignment", duration: 120, date: "2026-06-19", tag: "Study", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: generateId(), title: "Coffee with Mentor", description: "Career advice discussion", duration: 45, date: "2026-06-21", tag: "Networking", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+    { id: generateId(), title: "Coffee with Mentor", description: "Career advice discussion", duration: 45, date: "2026-06-21", tag: "Networking", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: generateId(), title: "Physics Lab Report", description: "Write conclusion section", duration: 150, date: "2026-06-22", tag: "Assignment", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: generateId(), title: "Career Fair", description: "Bring resumes, dress professionally", duration: 240, date: "2026-06-23", tag: "Event", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: generateId(), title: "Late Night Coding", description: "Fix bugs in final project", duration: 180, date: "2026-06-16", tag: "Study", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: generateId(), title: "Breakfast Club", description: "Weekly networking breakfast", duration: 30, date: "2026-06-15", tag: "Social", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: generateId(), title: "Thesis Writing", description: "Write literature review section meeting meeting", duration: 200, date: "2026-06-24", tag: "Research", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: generateId(), title: "Study Study Session", description: "Prepare for final exams", duration: 120, date: "2026-06-25", tag: "Study", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: generateId(), title: "Hackathon Prep", description: "Team meeting to plan project", duration: 75, date: "2026-06-26", tag: "Coding", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
   ];
+  
   setAllRecords(seed);
   refreshUI();
+  
+  const liveAlert = document.getElementById("liveAlert");
+  liveAlert.innerHTML = " Seed data loaded! 12 events added.";
+  setTimeout(() => { if (liveAlert.innerHTML === " Seed data loaded! 12 events added.") liveAlert.innerHTML = ""; }, 3000);
+}
+
+function handleClearData() {
+  if (confirm(" WARNING: This will delete ALL your events. Are you sure?")) {
+    if (confirm("Type 'DELETE' to confirm:")) {
+      setAllRecords([]);
+      refreshUI();
+      document.getElementById("eventForm").reset();
+      const liveAlert = document.getElementById("liveAlert");
+      liveAlert.innerHTML = " All data cleared.";
+      setTimeout(() => { if (liveAlert.innerHTML === " All data cleared.") liveAlert.innerHTML = ""; }, 3000);
+    }
+  }
 }
 
 function toggleViewMode() {
@@ -173,58 +180,46 @@ function toggleViewMode() {
 function init() {
   refreshUI();
   
-  // Form handlers
   document.getElementById("eventForm").addEventListener("submit", handleSubmit);
   document.getElementById("cancelEditBtn").addEventListener("click", cancelEdit);
-  
-  // Settings handlers
   document.getElementById("exportBtn").addEventListener("click", handleExport);
   document.getElementById("importBtn").addEventListener("click", () => document.getElementById("importFileInput").click());
   document.getElementById("importFileInput").addEventListener("change", (e) => {
     if (e.target.files[0]) handleImport(e.target.files[0]);
   });
   document.getElementById("seedDataBtn").addEventListener("click", loadSeed);
+  document.getElementById("clearDataBtn").addEventListener("click", handleClearData);
+  document.getElementById("toggleViewBtn").addEventListener("click", toggleViewMode);
+  
   document.getElementById("setTargetBtn").addEventListener("click", () => {
     const val = parseInt(document.getElementById("weeklyTarget").value);
     if (!isNaN(val) && val >= 0) setWeeklyTarget(val);
     refreshUI();
   });
-  document.getElementById("toggleViewBtn").addEventListener("click", toggleViewMode);
   
-  // Live regex search with validation
   const searchInput = document.getElementById("regexSearch");
-  searchInput.addEventListener("input", (e) => {
-    const pattern = e.target.value;
-    const validation = validateRegexPattern(pattern);
-    
-    if (!validation.valid && pattern !== "") {
-      showSearchError(validation.error);
-      setSearchRegex(null);
-    } else {
-      const regex = compileRegex(pattern);
-      setSearchRegex(regex);
-      if (pattern !== "") {
-        document.getElementById("searchHelp").innerHTML = " Valid regex pattern";
-        setTimeout(() => {
-          if (document.getElementById("searchHelp").innerHTML === " Valid regex pattern") {
-            document.getElementById("searchHelp").innerHTML = "Use JS regex (e.g., \\bexam\\b, @tag:lecture)";
-          }
-        }, 1500);
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      const pattern = e.target.value;
+      const validation = validateRegexPattern(pattern);
+      if (!validation.valid && pattern !== "") {
+        showSearchError(validation.error);
+        setSearchRegex(null);
+      } else {
+        const regex = compileRegex(pattern);
+        setSearchRegex(regex);
       }
-    }
-    refreshUI();
-  });
+      refreshUI();
+    });
+  }
   
-  // Sort buttons
   document.querySelectorAll("[data-sort]").forEach(btn => {
     btn.addEventListener("click", (e) => {
-      const field = e.target.dataset.sort;
-      sortRecords(field);
+      sortRecords(e.target.dataset.sort);
       refreshUI();
     });
   });
   
-  // Record actions (delegation)
   document.getElementById("recordsList").addEventListener("click", (e) => {
     if (e.target.classList.contains("edit-btn") || e.target.classList.contains("edit-btn-small")) {
       handleEdit(e.target.dataset.id);
@@ -234,13 +229,31 @@ function init() {
     }
   });
   
-  // Load saved target
   document.getElementById("weeklyTarget").value = getWeeklyTarget() || "";
   
-  // Set initial view button text
   const toggleBtn = document.getElementById("toggleViewBtn");
   if (toggleBtn) {
-    toggleBtn.innerHTML = getViewMode() === "card" ? "📋 Switch to Table View" : "🃏 Switch to Card View";
+    toggleBtn.innerHTML = getViewMode() === "card" ? " Switch to Table View" : " Switch to Card View";
+  }
+  
+  // Dark mode
+  const themeToggle = document.getElementById("themeToggle");
+  if (themeToggle) {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+      document.body.classList.add("dark");
+      themeToggle.innerHTML = "☀️ Light Mode";
+    }
+    themeToggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      if (document.body.classList.contains("dark")) {
+        themeToggle.innerHTML = "☀️ Light Mode";
+        localStorage.setItem("theme", "dark");
+      } else {
+        themeToggle.innerHTML = "🌙 Dark Mode";
+        localStorage.setItem("theme", "light");
+      }
+    });
   }
 }
 

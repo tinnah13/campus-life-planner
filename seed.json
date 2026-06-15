@@ -1,0 +1,122 @@
+[
+  {
+    "id": "evt_1",
+    "title": "Math Final Exam",
+    "description": "Study chapters 4-6, review practice problems, bring calculator",
+    "duration": 180,
+    "date": "2026-06-20",
+    "tag": "Exam",
+    "createdAt": "2026-06-10T10:00:00.000Z",
+    "updatedAt": "2026-06-10T10:00:00.000Z"
+  },
+  {
+    "id": "evt_2",
+    "title": "Group Project Meeting",
+    "description": "Discuss UI design, split tasks, set deadlines",
+    "duration": 90,
+    "date": "2026-06-18",
+    "tag": "Meeting",
+    "createdAt": "2026-06-11T14:30:00.000Z",
+    "updatedAt": "2026-06-11T14:30:00.000Z"
+  },
+  {
+    "id": "evt_3",
+    "title": "Gym Session",
+    "description": "Cardio and strength training",
+    "duration": 60,
+    "date": "2026-06-17",
+    "tag": "Health",
+    "createdAt": "2026-06-12T08:00:00.000Z",
+    "updatedAt": "2026-06-12T08:00:00.000Z"
+  },
+  {
+    "id": "evt_4",
+    "title": "Library Study",
+    "description": "Finish programming assignment",
+    "duration": 120,
+    "date": "2026-06-19",
+    "tag": "Study",
+    "createdAt": "2026-06-13T09:15:00.000Z",
+    "updatedAt": "2026-06-13T09:15:00.000Z"
+  },
+  {
+    "id": "evt_5",
+    "title": "Coffee with Mentor",
+    "description": "Career advice discussion",
+    "duration": 45,
+    "date": "2026-06-21",
+    "tag": "Networking",
+    "createdAt": "2026-06-14T11:00:00.000Z",
+    "updatedAt": "2026-06-14T11:00:00.000Z"
+  },
+  {
+    "id": "evt_6",
+    "title": "Physics Lab Report",
+    "description": "Write conclusion and analysis sections",
+    "duration": 150,
+    "date": "2026-06-22",
+    "tag": "Assignment",
+    "createdAt": "2026-06-15T13:20:00.000Z",
+    "updatedAt": "2026-06-15T13:20:00.000Z"
+  },
+  {
+    "id": "evt_7",
+    "title": "Career Fair",
+    "description": "Bring resumes, dress professionally",
+    "duration": 240,
+    "date": "2026-06-23",
+    "tag": "Event",
+    "createdAt": "2026-06-16T16:45:00.000Z",
+    "updatedAt": "2026-06-16T16:45:00.000Z"
+  },
+  {
+    "id": "evt_8",
+    "title": "Late Night Coding",
+    "description": "Fix bugs in the final project",
+    "duration": 180,
+    "date": "2026-06-16",
+    "tag": "Study",
+    "createdAt": "2026-06-17T22:00:00.000Z",
+    "updatedAt": "2026-06-17T22:00:00.000Z"
+  },
+  {
+    "id": "evt_9",
+    "title": "Breakfast Club",
+    "description": "Weekly networking breakfast",
+    "duration": 30,
+    "date": "2026-06-15",
+    "tag": "Social",
+    "createdAt": "2026-06-18T07:30:00.000Z",
+    "updatedAt": "2026-06-18T07:30:00.000Z"
+  },
+  {
+    "id": "evt_10",
+    "title": "Thesis Writing",
+    "description": "Write literature review section meeting meeting",
+    "duration": 200,
+    "date": "2026-06-24",
+    "tag": "Research",
+    "createdAt": "2026-06-19T10:00:00.000Z",
+    "updatedAt": "2026-06-19T10:00:00.000Z"
+  },
+  {
+    "id": "evt_11",
+    "title": "Study study Session",
+    "description": "Prepare for final exams with friends",
+    "duration": 120,
+    "date": "2026-06-25",
+    "tag": "Study",
+    "createdAt": "2026-06-20T15:30:00.000Z",
+    "updatedAt": "2026-06-20T15:30:00.000Z"
+  },
+  {
+    "id": "evt_12",
+    "title": "Hackathon Prep",
+    "description": "Team meeting to plan project idea",
+    "duration": 75,
+    "date": "2026-06-26",
+    "tag": "Coding",
+    "createdAt": "2026-06-21T18:00:00.000Z",
+    "updatedAt": "2026-06-21T18:00:00.000Z"
+  }
+]
