@@ -1,260 +1,421 @@
-import { 
-  getRecords, addRecord, updateRecord, deleteRecord, setAllRecords, 
-  generateId, sortRecords, getSearchRegex, setSearchRegex, 
-  getWeeklyTarget, setWeeklyTarget, getViewMode, setViewMode
-} from "./state.js";
-import { validateAll, hasDuplicateWords } from "./validators.js";
-import { compileRegex, validateRegexPattern } from "./search.js";
-import { renderRecords, updateStats, showSearchError } from "./ui.js";
-import { exportToJSON, importJSON } from "./storage.js";
+// ========== STORAGE ==========
+const STORAGE_KEY = "campusPlanner";
 
-let editingId = null;
-
-export function refreshUI() {
-  const records = getRecords();
-  const regex = getSearchRegex();
-  renderRecords(records, regex);
-  updateStats(records);
+function loadRecords() {
+  const data = localStorage.getItem(STORAGE_KEY);
+  return data ? JSON.parse(data) : [];
 }
 
-function handleSubmit(e) {
-  e.preventDefault();
+function saveRecords(records) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  displayRecords(records);
+  updateDashboard();
+}
+
+// ========== DISPLAY RECORDS ==========
+function displayRecords(recordsToShow = null) {
+  const records = recordsToShow || loadRecords();
+  const container = document.getElementById("recordsList");
+  
+  if (records.length === 0) {
+    container.innerHTML = '<p class="empty-message">No events yet. Add one above!</p>';
+    return;
+  }
+  
+  container.innerHTML = records.map(record => `
+    <div class="event-card">
+      <div class="event-title">${escapeHtml(record.title)}</div>
+      <div class="event-meta">
+        ${record.date} | ${record.duration} min | ${escapeHtml(record.tag)}
+      </div>
+      ${record.description ? `<div class="event-meta">${escapeHtml(record.description)}</div>` : ''}
+      <button onclick="deleteRecord('${record.id}')" class="danger-btn" style="margin-top:10px; padding:5px 10px;">Delete</button>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return text.replace(/[&<>]/g, function(m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    return m;
+  });
+}
+
+// ========== DASHBOARD ==========
+function updateDashboard() {
+  const records = loadRecords();
+  const target = parseInt(localStorage.getItem("weeklyTarget")) || 0;
+  
+  const totalTasks = records.length;
+  document.getElementById("totalTasks").innerText = totalTasks;
+  
+  const totalDuration = records.reduce((sum, r) => sum + parseFloat(r.duration || 0), 0);
+  document.getElementById("totalDuration").innerHTML = totalDuration.toFixed(0) + ' <span style="font-size:0.8rem;">min</span>';
+  
+  const tagCount = {};
+  records.forEach(r => { tagCount[r.tag] = (tagCount[r.tag] || 0) + 1; });
+  let topTag = "—";
+  let maxCount = 0;
+  for (let [tag, count] of Object.entries(tagCount)) {
+    if (count > maxCount) { maxCount = count; topTag = tag; }
+  }
+  document.getElementById("topTag").innerText = topTag;
+  
+  const today = new Date();
+  const last7Days = records.filter(r => {
+    const recordDate = new Date(r.date);
+    const daysDiff = (today - recordDate) / (1000 * 3600 * 24);
+    return daysDiff <= 7 && daysDiff >= 0;
+  });
+  const weeklyTotal = last7Days.reduce((sum, r) => sum + parseFloat(r.duration), 0);
+  const percentage = target > 0 ? Math.min(100, (weeklyTotal / target) * 100) : 0;
+  
+  if (!target || target === 0) {
+    document.getElementById("targetStatus").innerHTML = "Not set";
+    document.getElementById("progressText").innerHTML = "Set a target";
+    document.getElementById("progressFill").style.width = "0%";
+  } else {
+    document.getElementById("targetStatus").innerHTML = `${weeklyTotal}/${target} min`;
+    document.getElementById("progressText").innerHTML = `${weeklyTotal} / ${target} min (${percentage.toFixed(0)}%)`;
+    document.getElementById("progressFill").style.width = `${percentage}%`;
+    
+    const liveAlert = document.getElementById("liveAlert");
+    if (weeklyTotal >= target) {
+      liveAlert.style.display = "block";
+      liveAlert.innerHTML = "Congratulations! You've reached your weekly target!";
+      liveAlert.style.background = "#dcfce7";
+      setTimeout(() => { liveAlert.style.display = "none"; }, 3000);
+    } else if (weeklyTotal > 0) {
+      liveAlert.style.display = "block";
+      liveAlert.innerHTML = `You need ${target - weeklyTotal} more minutes this week.`;
+      liveAlert.style.background = "#fef3c7";
+      setTimeout(() => { liveAlert.style.display = "none"; }, 3000);
+    }
+  }
+}
+
+// ========== VALIDATION ==========
+function validateTitle(title) {
+  return /^\S(?:.*\S)?$/.test(title) && title.length >= 3;
+}
+
+function validateDuration(duration) {
+  return /^(0|[1-9]\d*)(\.\d{1,2})?$/.test(duration) && parseFloat(duration) > 0;
+}
+
+function validateDate(date) {
+  return /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(date);
+}
+
+function validateTag(tag) {
+  return /^[A-Za-z]+(?:[ -][A-Za-z]+)*$/.test(tag) && tag.length >= 2;
+}
+
+// ========== ADD EVENT ==========
+function addEvent(event) {
+  event.preventDefault();
   
   const title = document.getElementById("title").value;
   const description = document.getElementById("description").value;
   const duration = document.getElementById("duration").value;
   const date = document.getElementById("date").value;
   const tag = document.getElementById("tag").value;
-
-  const validation = validateAll(title, duration, date, tag, description);
   
-  document.getElementById("titleError").innerHTML = validation.title ? "" : "No leading/trailing spaces (min 3 chars)";
-  document.getElementById("durationError").innerHTML = validation.duration ? "" : "Positive number required";
-  document.getElementById("dateError").innerHTML = validation.date ? "" : "Valid YYYY-MM-DD date required";
-  document.getElementById("tagError").innerHTML = validation.tag ? "" : "Letters, spaces, hyphens only";
+  let isValid = true;
   
-  if (hasDuplicateWords(description)) {
-    const liveAlert = document.getElementById("liveAlert");
-    liveAlert.innerHTML = " Duplicate words detected in description";
-    setTimeout(() => { if (liveAlert.innerHTML.includes("Duplicate")) liveAlert.innerHTML = ""; }, 3000);
+  if (!validateTitle(title)) {
+    document.getElementById("titleError").innerText = "Title: no leading/trailing spaces, min 3 chars";
+    isValid = false;
+  } else {
+    document.getElementById("titleError").innerText = "";
   }
   
-  if (!validation.allValid) return;
+  if (!validateDuration(duration)) {
+    document.getElementById("durationError").innerText = "Duration: positive number required";
+    isValid = false;
+  } else {
+    document.getElementById("durationError").innerText = "";
+  }
   
-  const now = new Date().toISOString();
-  const record = {
-    id: editingId || generateId(),
+  if (!validateDate(date)) {
+    document.getElementById("dateError").innerText = "Date: use YYYY-MM-DD format";
+    isValid = false;
+  } else {
+    document.getElementById("dateError").innerText = "";
+  }
+  
+  if (!validateTag(tag)) {
+    document.getElementById("tagError").innerText = "Tag: letters, spaces, hyphens only";
+    isValid = false;
+  } else {
+    document.getElementById("tagError").innerText = "";
+  }
+  
+  if (!isValid) return;
+  
+  const records = loadRecords();
+  const newRecord = {
+    id: Date.now().toString(),
     title: title.trim(),
     description: description.trim(),
     duration: parseFloat(duration),
     date: date,
     tag: tag.trim(),
-    createdAt: editingId ? getRecords().find(r => r.id === editingId)?.createdAt || now : now,
-    updatedAt: now
+    createdAt: new Date().toISOString()
   };
-
-  if (editingId) {
-    updateRecord(editingId, record);
-    editingId = null;
-    document.getElementById("submitBtn").innerText = " Add Event";
-    document.getElementById("cancelEditBtn").style.display = "none";
-  } else {
-    addRecord(record);
-  }
+  
+  records.push(newRecord);
+  saveRecords(records);
   
   document.getElementById("eventForm").reset();
-  refreshUI();
-  
-  const liveAlert = document.getElementById("liveAlert");
-  liveAlert.innerHTML = " Event saved successfully!";
-  setTimeout(() => { if (liveAlert.innerHTML === " Event saved successfully!") liveAlert.innerHTML = ""; }, 2000);
+  document.getElementById("formMessage").innerHTML = '<div class="success">Event added successfully!</div>';
+  setTimeout(() => document.getElementById("formMessage").innerHTML = "", 2000);
 }
 
-function handleEdit(id) {
-  const record = getRecords().find(r => r.id === id);
-  if (!record) return;
-  editingId = id;
-  document.getElementById("title").value = record.title;
-  document.getElementById("description").value = record.description || "";
-  document.getElementById("duration").value = record.duration;
-  document.getElementById("date").value = record.date;
-  document.getElementById("tag").value = record.tag;
-  document.getElementById("submitBtn").innerText = " Update Event";
-  document.getElementById("cancelEditBtn").style.display = "inline-block";
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-function cancelEdit() {
-  editingId = null;
-  document.getElementById("eventForm").reset();
-  document.getElementById("submitBtn").innerText = "➕ Add Event";
-  document.getElementById("cancelEditBtn").style.display = "none";
-}
-
-function handleDelete(id) {
+// ========== DELETE EVENT ==========
+window.deleteRecord = function(id) {
   if (confirm("Delete this event?")) {
-    deleteRecord(id);
-    refreshUI();
+    const records = loadRecords();
+    const filtered = records.filter(r => r.id !== id);
+    saveRecords(filtered);
   }
+};
+
+// ========== SORT FUNCTIONS ==========
+function sortByTitle() {
+  const records = loadRecords();
+  records.sort((a, b) => a.title.localeCompare(b.title));
+  displayRecords(records);
+  document.getElementById("searchHelp").innerHTML = 'Sorted by Title ✓';
+  setTimeout(() => {
+    if (document.getElementById("searchHelp").innerHTML === 'Sorted by Title ✓') {
+      document.getElementById("searchHelp").innerHTML = 'Try: ^Study (starts with), @exam|meeting (contains Exam or Meeting)';
+    }
+  }, 2000);
 }
 
-function handleExport() {
-  const data = exportToJSON(getRecords());
-  const blob = new Blob([data], { type: "application/json" });
+function sortByDate() {
+  const records = loadRecords();
+  records.sort((a, b) => new Date(a.date) - new Date(b.date));
+  displayRecords(records);
+  document.getElementById("searchHelp").innerHTML = 'Sorted by Date ✓';
+  setTimeout(() => {
+    if (document.getElementById("searchHelp").innerHTML === 'Sorted by Date ✓') {
+      document.getElementById("searchHelp").innerHTML = 'Try: ^Study (starts with), @exam|meeting (contains Exam or Meeting)';
+    }
+  }, 2000);
+}
+
+function sortByDuration() {
+  const records = loadRecords();
+  records.sort((a, b) => a.duration - b.duration);
+  displayRecords(records);
+  document.getElementById("searchHelp").innerHTML = 'Sorted by Duration ✓';
+  setTimeout(() => {
+    if (document.getElementById("searchHelp").innerHTML === 'Sorted by Duration ✓') {
+      document.getElementById("searchHelp").innerHTML = 'Try: ^Study (starts with), @exam|meeting (contains Exam or Meeting)';
+    }
+  }, 2000);
+}
+
+// ========== REGEX SEARCH WITH HIGHLIGHTING ==========
+function searchEvents() {
+  const pattern = document.getElementById("regexSearch").value;
+  const records = loadRecords();
+  const container = document.getElementById("recordsList");
+  
+  if (!pattern.trim()) {
+    displayRecords(records);
+    document.getElementById("searchHelp").innerHTML = 'Try: ^Study (starts with), @exam|meeting (contains Exam or Meeting)';
+    document.getElementById("searchHelp").style.color = "#888";
+    return;
+  }
+  
+  let regex;
+  try {
+    regex = new RegExp(pattern, "i");
+    document.getElementById("searchHelp").innerHTML = 'Valid regex pattern ✓';
+    document.getElementById("searchHelp").style.color = "#10b981";
+  } catch (error) {
+    document.getElementById("searchHelp").innerHTML = `Invalid regex: ${error.message}`;
+    document.getElementById("searchHelp").style.color = "#ef4444";
+    return;
+  }
+  
+  const filtered = records.filter(record => 
+    regex.test(record.title) || 
+    regex.test(record.description || "") || 
+    regex.test(record.tag)
+  );
+  
+  if (filtered.length === 0) {
+    container.innerHTML = '<p class="empty-message">No matching events found.</p>';
+    return;
+  }
+  
+  function highlightText(text) {
+    if (!text) return text;
+    return text.replace(regex, match => `<mark class="search-highlight">${match}</mark>`);
+  }
+  
+  container.innerHTML = filtered.map(record => `
+    <div class="event-card">
+      <div class="event-title">${highlightText(escapeHtml(record.title))}</div>
+      <div class="event-meta">
+        ${record.date} | ${record.duration} min | ${highlightText(escapeHtml(record.tag))}
+      </div>
+      ${record.description ? `<div class="event-meta">${highlightText(escapeHtml(record.description))}</div>` : ''}
+      <button onclick="deleteRecord('${record.id}')" class="danger-btn" style="margin-top:10px; padding:5px 10px;">Delete</button>
+    </div>
+  `).join('');
+}
+
+// ========== EXPORT ==========
+function exportData() {
+  const records = loadRecords();
+  const dataStr = JSON.stringify(records, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `campus_planner_${new Date().toISOString().slice(0, 19)}.json`;
+  a.download = `campus_planner_${new Date().toISOString().slice(0,19)}.json`;
   a.click();
   URL.revokeObjectURL(url);
   
-  const liveAlert = document.getElementById("liveAlert");
-  liveAlert.innerHTML = " Data exported!";
-  setTimeout(() => { if (liveAlert.innerHTML === " Data exported!") liveAlert.innerHTML = ""; }, 2000);
+  document.getElementById("settingsMessage").innerHTML = '<div class="success">Exported successfully!</div>';
+  setTimeout(() => document.getElementById("settingsMessage").innerHTML = "", 2000);
 }
 
-function handleImport(file) {
+// ========== IMPORT ==========
+function importData(file) {
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = function(e) {
     try {
-      const imported = importJSON(e.target.result);
-      setAllRecords(imported);
-      refreshUI();
-      const liveAlert = document.getElementById("liveAlert");
-      liveAlert.innerHTML = `Imported ${imported.length} records!`;
-      setTimeout(() => { if (liveAlert.innerHTML.includes("Imported")) liveAlert.innerHTML = ""; }, 3000);
-    } catch (err) {
-      alert("Import failed: " + err.message);
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error("Not an array");
+      
+      imported.forEach(rec => {
+        if (!rec.id || !rec.title || !rec.duration || !rec.date || !rec.tag) {
+          throw new Error("Invalid record structure");
+        }
+      });
+      
+      saveRecords(imported);
+      document.getElementById("settingsMessage").innerHTML = `<div class="success">Imported ${imported.length} records!</div>`;
+      setTimeout(() => document.getElementById("settingsMessage").innerHTML = "", 2000);
+    } catch(err) {
+      alert("Import failed: Invalid JSON file");
     }
   };
   reader.readAsText(file);
 }
 
-function loadSeed() {
-  const seed = [
-    { id: generateId(), title: "Math Final Exam", description: "Study chapters 4-6, review practice problems", duration: 180, date: "2026-06-20", tag: "Exam", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: generateId(), title: "Group Project Meeting", description: "Discuss UI design and split tasks", duration: 90, date: "2026-06-18", tag: "Meeting", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: generateId(), title: "Gym Session", description: "Cardio and strength training", duration: 60, date: "2026-06-17", tag: "Health", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: generateId(), title: "Library Study", description: "Finish programming assignment", duration: 120, date: "2026-06-19", tag: "Study", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: generateId(), title: "Coffee with Mentor", description: "Career advice discussion", duration: 45, date: "2026-06-21", tag: "Networking", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: generateId(), title: "Physics Lab Report", description: "Write conclusion section", duration: 150, date: "2026-06-22", tag: "Assignment", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: generateId(), title: "Career Fair", description: "Bring resumes, dress professionally", duration: 240, date: "2026-06-23", tag: "Event", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: generateId(), title: "Late Night Coding", description: "Fix bugs in final project", duration: 180, date: "2026-06-16", tag: "Study", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: generateId(), title: "Breakfast Club", description: "Weekly networking breakfast", duration: 30, date: "2026-06-15", tag: "Social", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: generateId(), title: "Thesis Writing", description: "Write literature review section meeting meeting", duration: 200, date: "2026-06-24", tag: "Research", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: generateId(), title: "Study Study Session", description: "Prepare for final exams", duration: 120, date: "2026-06-25", tag: "Study", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: generateId(), title: "Hackathon Prep", description: "Team meeting to plan project", duration: 75, date: "2026-06-26", tag: "Coding", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+// ========== LOAD SAMPLE DATA ==========
+function loadSampleData() {
+  const today = new Date().toISOString().slice(0,10);
+  const sample = [
+    { id: "1", title: "Math Final Exam", description: "Study chapters 4-6", duration: 180, date: today, tag: "Exam", createdAt: new Date().toISOString() },
+    { id: "2", title: "Group Meeting", description: "Discuss project", duration: 90, date: today, tag: "Meeting", createdAt: new Date().toISOString() },
+    { id: "3", title: "Gym Session", description: "Cardio workout", duration: 60, date: today, tag: "Health", createdAt: new Date().toISOString() },
+    { id: "4", title: "Library Study", description: "Finish assignment", duration: 120, date: today, tag: "Study", createdAt: new Date().toISOString() },
+    { id: "5", title: "Coffee with Mentor", description: "Career advice", duration: 45, date: today, tag: "Networking", createdAt: new Date().toISOString() }
   ];
-  
-  setAllRecords(seed);
-  refreshUI();
-  
-  const liveAlert = document.getElementById("liveAlert");
-  liveAlert.innerHTML = " Seed data loaded! 12 events added.";
-  setTimeout(() => { if (liveAlert.innerHTML === " Seed data loaded! 12 events added.") liveAlert.innerHTML = ""; }, 3000);
+  saveRecords(sample);
+  document.getElementById("settingsMessage").innerHTML = '<div class="success">Sample data loaded! 5 events added.</div>';
+  setTimeout(() => document.getElementById("settingsMessage").innerHTML = "", 2000);
 }
 
-function handleClearData() {
-  if (confirm(" WARNING: This will delete ALL your events. Are you sure?")) {
-    if (confirm("Type 'DELETE' to confirm:")) {
-      setAllRecords([]);
-      refreshUI();
-      document.getElementById("eventForm").reset();
-      const liveAlert = document.getElementById("liveAlert");
-      liveAlert.innerHTML = " All data cleared.";
-      setTimeout(() => { if (liveAlert.innerHTML === " All data cleared.") liveAlert.innerHTML = ""; }, 3000);
-    }
+// ========== CLEAR ALL ==========
+function clearAll() {
+  if (confirm("Delete ALL events? This cannot be undone!")) {
+    saveRecords([]);
+    document.getElementById("settingsMessage").innerHTML = '<div class="success">All data cleared.</div>';
+    setTimeout(() => document.getElementById("settingsMessage").innerHTML = "", 2000);
   }
 }
 
-function toggleViewMode() {
-  const newMode = getViewMode() === "card" ? "table" : "card";
-  setViewMode(newMode);
-  const toggleBtn = document.getElementById("toggleViewBtn");
-  if (toggleBtn) {
-    toggleBtn.innerHTML = newMode === "card" ? " Switch to Table View" : " Switch to Card View";
+// ========== SET WEEKLY TARGET ==========
+function setWeeklyTarget() {
+  const target = parseInt(document.getElementById("weeklyTarget").value);
+  if (!isNaN(target) && target >= 0) {
+    localStorage.setItem("weeklyTarget", target);
+    updateDashboard();
+    document.getElementById("settingsMessage").innerHTML = '<div class="success">Weekly target set!</div>';
+    setTimeout(() => document.getElementById("settingsMessage").innerHTML = "", 2000);
+  } else {
+    alert("Please enter a valid number");
   }
-  refreshUI();
 }
 
-function init() {
-  refreshUI();
-  
-  document.getElementById("eventForm").addEventListener("submit", handleSubmit);
-  document.getElementById("cancelEditBtn").addEventListener("click", cancelEdit);
-  document.getElementById("exportBtn").addEventListener("click", handleExport);
-  document.getElementById("importBtn").addEventListener("click", () => document.getElementById("importFileInput").click());
-  document.getElementById("importFileInput").addEventListener("change", (e) => {
-    if (e.target.files[0]) handleImport(e.target.files[0]);
-  });
-  document.getElementById("seedDataBtn").addEventListener("click", loadSeed);
-  document.getElementById("clearDataBtn").addEventListener("click", handleClearData);
-  document.getElementById("toggleViewBtn").addEventListener("click", toggleViewMode);
-  
-  document.getElementById("setTargetBtn").addEventListener("click", () => {
-    const val = parseInt(document.getElementById("weeklyTarget").value);
-    if (!isNaN(val) && val >= 0) setWeeklyTarget(val);
-    refreshUI();
-  });
-  
-  const searchInput = document.getElementById("regexSearch");
-  if (searchInput) {
-    searchInput.addEventListener("input", (e) => {
-      const pattern = e.target.value;
-      const validation = validateRegexPattern(pattern);
-      if (!validation.valid && pattern !== "") {
-        showSearchError(validation.error);
-        setSearchRegex(null);
-      } else {
-        const regex = compileRegex(pattern);
-        setSearchRegex(regex);
-      }
-      refreshUI();
-    });
-  }
-  
-  document.querySelectorAll("[data-sort]").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      sortRecords(e.target.dataset.sort);
-      refreshUI();
-    });
-  });
-  
-  document.getElementById("recordsList").addEventListener("click", (e) => {
-    if (e.target.classList.contains("edit-btn") || e.target.classList.contains("edit-btn-small")) {
-      handleEdit(e.target.dataset.id);
-    }
-    if (e.target.classList.contains("delete-btn") || e.target.classList.contains("delete-btn-small")) {
-      handleDelete(e.target.dataset.id);
-    }
-  });
-  
-  document.getElementById("weeklyTarget").value = getWeeklyTarget() || "";
-  
-  const toggleBtn = document.getElementById("toggleViewBtn");
-  if (toggleBtn) {
-    toggleBtn.innerHTML = getViewMode() === "card" ? " Switch to Table View" : " Switch to Card View";
-  }
-  
-  // Dark mode
+// ========== DARK MODE ==========
+function initDarkMode() {
   const themeToggle = document.getElementById("themeToggle");
-  if (themeToggle) {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "dark") {
-      document.body.classList.add("dark");
-      themeToggle.innerHTML = "☀️ Light Mode";
+  const savedTheme = localStorage.getItem("theme");
+  
+  if (savedTheme === "dark") {
+    document.body.classList.add("dark");
+    themeToggle.textContent = "Light Mode";
+  }
+  
+  themeToggle.addEventListener("click", () => {
+    document.body.classList.toggle("dark");
+    if (document.body.classList.contains("dark")) {
+      themeToggle.textContent = "Light Mode";
+      localStorage.setItem("theme", "dark");
+    } else {
+      themeToggle.textContent = "Dark Mode";
+      localStorage.setItem("theme", "light");
     }
-    themeToggle.addEventListener("click", () => {
-      document.body.classList.toggle("dark");
-      if (document.body.classList.contains("dark")) {
-        themeToggle.innerHTML = "☀️ Light Mode";
-        localStorage.setItem("theme", "dark");
-      } else {
-        themeToggle.innerHTML = "🌙 Dark Mode";
-        localStorage.setItem("theme", "light");
-      }
+  });
+}
+
+// ========== HAMBURGER MENU ==========
+function initHamburgerMenu() {
+  const hamburger = document.getElementById("hamburgerBtn");
+  const navMenu = document.getElementById("navMenu");
+  
+  if (hamburger && navMenu) {
+    hamburger.addEventListener("click", () => {
+      hamburger.classList.toggle("active");
+      navMenu.classList.toggle("active");
+    });
+    
+    document.querySelectorAll(".nav-menu li a").forEach(link => {
+      link.addEventListener("click", () => {
+        hamburger.classList.remove("active");
+        navMenu.classList.remove("active");
+      });
     });
   }
 }
 
-init();
+// ========== INITIALIZE ==========
+document.addEventListener("DOMContentLoaded", function() {
+  // Form and buttons
+  document.getElementById("eventForm").addEventListener("submit", addEvent);
+  document.getElementById("exportBtn").addEventListener("click", exportData);
+  document.getElementById("importBtn").addEventListener("click", () => document.getElementById("importFile").click());
+  document.getElementById("importFile").addEventListener("change", (e) => {
+    if (e.target.files[0]) importData(e.target.files[0]);
+  });
+  document.getElementById("seedBtn").addEventListener("click", loadSampleData);
+  document.getElementById("clearBtn").addEventListener("click", clearAll);
+  document.getElementById("setTargetBtn").addEventListener("click", setWeeklyTarget);
+  
+  // Sort buttons
+  document.getElementById("sortTitleBtn").addEventListener("click", sortByTitle);
+  document.getElementById("sortDateBtn").addEventListener("click", sortByDate);
+  document.getElementById("sortDurationBtn").addEventListener("click", sortByDuration);
+  
+  // Search input
+  document.getElementById("regexSearch").addEventListener("input", searchEvents);
+  
+  // Initialize
+  initDarkMode();
+  initHamburgerMenu();
+  displayRecords();
+  updateDashboard();
+});

@@ -1,211 +1,145 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Campus Life Planner - Organize your tasks, deadlines, and events">
-  <title>Campus Life Planner | Student Organization Tool</title>
+  <title>Campus Life Planner</title>
   <link rel="stylesheet" href="styles/main.css">
 </head>
-
 <body>
 
-  <a class="skip-link" href="#main">Skip to Content</a>
+<!-- SKIP LINK FOR ACCESSIBILITY -->
+<a href="#main-content" class="skip-link">Skip to main content</a>
 
-  <header>
-    <h1> Campus Life Planner</h1>
-    <nav aria-label="Main navigation">
-      <ul>
-        <li><a href="#about">About</a></li>
-        <li><a href="#dashboard">Dashboard</a></li>
-        <li><a href="#records">Records</a></li>
-        <li><a href="#form">Add Event</a></li>
-        <li><a href="#settings">Settings</a></li>
-      </ul>
-    </nav>
-    <button id="themeToggle" aria-label="Toggle dark mode">🌙 Dark Mode</button>
-  </header>
-
-  <main id="main">
-
-    <section class="hero" aria-label="Welcome section">
-      <h2>Plan Your Campus Life Better</h2>
-      <p>Manage tasks, deadlines, meetings, and events in one beautiful, accessible place.</p>
-      <button onclick="document.getElementById('form').scrollIntoView({behavior: 'smooth'})" aria-label="Start planning now">
-         Start Planning
-      </button>
-    </section>
-
-    <section id="about" aria-labelledby="about-heading">
-      <h2 id="about-heading">About</h2>
-      <p><strong>Campus Life Planner</strong> helps students organize their daily activities, deadlines, and campus life with powerful regex search, sorting, and data persistence.</p>
-      <br>
-      <p> <strong>Contact:</strong> <a href="mailto:a.umuhoza2@alustudent.com">a.umu@alustudent.com</a></p>
-      <p> <strong>GitHub:</strong> <a href="https://github.com/tinnah13" target="_blank" rel="noopener noreferrer">@campusplanner</a></p>
-    </section>
-
-    <!-- ========== M5 DASHBOARD WITH STATS, PROGRESS BAR, AND CHART ========== -->
-    <section id="dashboard" aria-labelledby="dashboard-heading">
-      <h2 id="dashboard-heading">Dashboard</h2>
-      
-      <!-- Stats Grid - 4 cards -->
-      <div class="stats" id="statsContainer">
-        <article>
-          <h3>Total Tasks</h3>
-          <p id="totalTasks">0</p>
-        </article>
-        <article>
-          <h3>Total Duration</h3>
-          <p id="totalDuration">0 <span class="unit">min</span></p>
-        </article>
-        <article>
-          <h3>Top Tag</h3>
-          <p id="topTag">—</p>
-        </article>
-        <article>
-          <h3>Weekly Target</h3>
-          <p id="targetStatus">Not set</p>
-        </article>
-      </div>
-      
-      <!-- Progress Bar Section -->
-      <div class="progress-section" id="progressSection">
-        <div class="progress-header">
-          <span> Weekly Progress</span>
-          <span id="progressText" class="progress-text">0 / 0 min</span>
-        </div>
-        <div class="progress-bar-container" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressBar">
-          <div class="progress-fill" id="progressFill"></div>
-        </div>
-        <div id="trendIndicator" class="trend-indicator"></div>
-      </div>
-      
-      <!-- Weekly Bar Chart -->
-      <div id="weeklyChart" class="weekly-chart"></div>
-      
-      <!-- ARIA Live Alert for announcements -->
-      <div aria-live="polite" id="liveAlert" class="live-alert"></div>
-    </section>
-
-    <section id="records" aria-labelledby="records-heading">
-      <h2 id="records-heading">Records</h2>
-      <div class="search-sort-bar">
-        <div class="search-group">
-          <label for="regexSearch"> Regex Search:</label>
-          <input type="text" id="regexSearch" placeholder="e.g., @exam|study|^meeting|\\bexam\\b" aria-describedby="searchHelp">
-          <small id="searchHelp">Use JavaScript regex (e.g., \bexam\b, @tag:lecture, ^Study)</small>
-        </div>
-        <div class="sort-buttons">
-          <button data-sort="title" aria-label="Sort by title"> Sort by Title ↕</button>
-          <button data-sort="date" aria-label="Sort by date"> Sort by Date ↕</button>
-          <button data-sort="duration" aria-label="Sort by duration"> Sort by Duration ↕</button>
-          <button id="toggleViewBtn" class="view-toggle" aria-label="Toggle between card and table view">📋 Switch to Table View</button>
-        </div>
-      </div>
-      <div id="recordsList" class="record-list" role="region" aria-label="Event records list">
-        <div class="empty-state"> No events added yet. Click "Add Event" to get started!</div>
-      </div>
-    </section>
-
-    <section id="form" aria-labelledby="form-heading">
-      <h2 id="form-heading">Add / Edit Event</h2>
-      <form id="eventForm" novalidate>
-        <input type="hidden" id="editId">
-        
-        <label for="title">Task / Event Name *</label>
-        <input id="title" type="text" placeholder="e.g., Study Session, Group Meeting" required aria-required="true">
-        <div class="error-message" id="titleError" aria-live="polite"></div>
-
-        <label for="description">Description <span class="optional">(optional)</span></label>
-        <textarea id="description" rows="3" placeholder="Add details about this event..."></textarea>
-
-        <label for="duration">Duration (minutes) *</label>
-        <input id="duration" type="number" step="0.01" placeholder="e.g., 90 " required aria-required="true">
-        <div class="error-message" id="durationError" aria-live="polite"></div>
-
-        <label for="date">Due Date *</label>
-        <input id="date" type="date" required aria-required="true">
-        <div class="error-message" id="dateError" aria-live="polite"></div>
-
-        <label for="tag">Tag * <span class="optional">(letters, spaces, hyphens only)</span></label>
-        <input id="tag" type="text" placeholder="e.g., Study, Exam-Prep, Health" required aria-required="true">
-        <div class="error-message" id="tagError" aria-live="polite"></div>
-
-        <div class="form-buttons">
-          <button type="submit" id="submitBtn"> Add Event</button>
-          <button type="button" id="cancelEditBtn" class="secondary" style="display:none;"> Cancel Edit</button>
-        </div>
-      </form>
-    </section>
-
-    <section id="settings" aria-labelledby="settings-heading">
-      <h2 id="settings-heading">Settings</h2>
-      
-      <div class="setting-group">
-        <label for="weeklyTarget"> Weekly Target (minutes)</label>
-        <div class="setting-input-group">
-          <input id="weeklyTarget" type="number" placeholder="e.g., 300" min="0" step="10">
-          <button id="setTargetBtn">Set Target</button>
-        </div>
-        <small class="note">Target compares total duration of events in the last 7 days.</small>
-      </div>
-
-      <hr>
-
-      <div class="setting-group">
-        <label> Data Management</label>
-        <div class="button-group">
-          <button id="exportBtn"> Export JSON</button>
-          <button id="importBtn"> Import JSON</button>
-          <input type="file" id="importFileInput" accept=".json" style="display:none">
-          <button id="seedDataBtn" class="secondary"> Load Seed Data</button>
-        </div>
-        <small class="note">Export your data for backup or import previously saved JSON files.</small>
-      </div>
-
-      <hr>
-
-      <div class="setting-group">
-        <label> Display</label>
-        <div class="button-group">
-          <button id="resetViewBtn"> Reset to Card View</button>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <footer>
-    <p>© 2026 Campus Life Planner | Accessible • Responsive • Student-Friendly</p>
-  </footer>
-
-  <script type="module" src="scripts/main.js"></script>
-  <script>
-  // Dark mode toggle
-  const themeToggle = document.getElementById('themeToggle');
-  
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      
-      // Change button text
-      if (document.body.classList.contains('dark')) {
-        themeToggle.textContent = '☀️ Light Mode';
-        localStorage.setItem('theme', 'dark');
-      } else {
-        themeToggle.textContent = '🌙 Dark Mode';
-        localStorage.setItem('theme', 'light');
-      }
-    });
+<!-- STICKY NAVIGATION WITH HAMBURGER MENU -->
+<nav class="main-nav">
+  <div class="nav-container">
+    <div class="nav-logo">
+      <h1>Campus Life Planner</h1>
+    </div>
     
-    // Load saved preference
-    if (localStorage.getItem('theme') === 'dark') {
-      document.body.classList.add('dark');
-      themeToggle.textContent = '☀️ Light Mode';
-    }
-  }
-</script>
-</body>
+    <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    
+    <ul class="nav-menu" id="navMenu">
+      <li><a href="#dashboard">Dashboard</a></li>
+      <li><a href="#add-event">Add Event</a></li>
+      <li><a href="#records">Your Events</a></li>
+      <li><a href="#settings">Settings</a></li>
+      <li><button id="themeToggle" class="theme-btn nav-theme-btn">Dark Mode</button></li>
+    </ul>
+  </div>
+</nav>
 
+<main id="main-content">
+
+  <!-- DASHBOARD -->
+  <section id="dashboard">
+    <h2>Dashboard</h2>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Total Tasks</h3>
+        <p id="totalTasks">0</p>
+      </div>
+      <div class="stat-card">
+        <h3>Total Duration</h3>
+        <p id="totalDuration">0 <span style="font-size:0.8rem;">min</span></p>
+      </div>
+      <div class="stat-card">
+        <h3>Top Tag</h3>
+        <p id="topTag">—</p>
+      </div>
+      <div class="stat-card">
+        <h3>Weekly Target</h3>
+        <p id="targetStatus">Not set</p>
+      </div>
+    </div>
+    
+    <div class="progress-section">
+      <div class="progress-header">
+        <span>Weekly Progress</span>
+        <span id="progressText">0 / 0 min</span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+    <div id="liveAlert" class="success" style="display:none;"></div>
+  </section>
+
+  <!-- ADD EVENT FORM -->
+  <section id="add-event">
+    <h2>Add New Event</h2>
+    <form id="eventForm">
+      <input type="text" id="title" placeholder="Event title *" required>
+      <div class="error" id="titleError"></div>
+      
+      <textarea id="description" placeholder="Description (optional)" rows="2"></textarea>
+      
+      <input type="number" id="duration" placeholder="Duration (minutes) *" required>
+      <div class="error" id="durationError"></div>
+      
+      <input type="date" id="date" required>
+      <div class="error" id="dateError"></div>
+      
+      <input type="text" id="tag" placeholder="Tag (e.g., Study, Exam) *" required>
+      <div class="error" id="tagError"></div>
+      
+      <button type="submit">Add Event</button>
+    </form>
+    <div id="formMessage"></div>
+  </section>
+
+  <!-- RECORDS LIST -->
+  <section id="records">
+    <h2>Your Events</h2>
+    
+    <!-- SEARCH AND SORT CONTROLS -->
+    <div class="search-sort-container">
+      <div class="search-box">
+        <label for="regexSearch">Regex Search:</label>
+        <input type="text" id="regexSearch" placeholder="e.g., ^Study | @exam|meeting | \bexam\b" aria-describedby="searchHelp">
+        <small id="searchHelp">Try: ^Study (starts with), @exam|meeting (contains Exam or Meeting)</small>
+      </div>
+      
+      <div class="sort-buttons">
+        <button id="sortTitleBtn">Sort by Title</button>
+        <button id="sortDateBtn">Sort by Date</button>
+        <button id="sortDurationBtn">Sort by Duration</button>
+      </div>
+    </div>
+    
+    <div id="recordsList">
+      <p class="empty-message">No events yet. Add one above!</p>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="settings">
+    <h2>Settings</h2>
+    <div style="margin-bottom: 15px;">
+      <label for="weeklyTarget" style="display: block; margin-bottom: 5px;">Weekly Target (minutes)</label>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="number" id="weeklyTarget" placeholder="e.g., 300" style="width: auto; flex: 1; min-width: 150px;">
+        <button id="setTargetBtn">Set Target</button>
+      </div>
+    </div>
+    
+    <hr style="margin: 15px 0; border-color: #ddd;">
+    
+    <button id="exportBtn">Export JSON</button>
+    <button id="importBtn">Import JSON</button>
+    <input type="file" id="importFile" accept=".json" style="display:none">
+    <button id="seedBtn">Load Sample Data</button>
+    <button id="clearBtn" class="danger-btn">Clear All</button>
+    <div id="settingsMessage"></div>
+  </section>
+
+</main>
+
+<script src="scripts/main.js"></script>
+</body>
 </html>
