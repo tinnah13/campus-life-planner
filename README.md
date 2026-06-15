@@ -5,8 +5,8 @@ A responsive web application that helps students organize tasks, events, deadlin
 
 ## Languages Used
 - HTML5
-- CSS3
-- JavaScript (ES6)
+- CSS
+- JavaScript 
 
 ## Features
 
