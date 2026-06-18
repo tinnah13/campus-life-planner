@@ -1,11 +1,10 @@
 # Campus Life Planner
 
+deployement link:  https://tinnah13.github.io/campus-life-planner/
+video link: https://docs.google.com/videos/d/1fe07lAvDCDmIudapykCGkMCdvl2SthtzS25XnXTmzrs/edit?scene=id.p#scene=id.p
 ## Overview
 A responsive web application that helps students organize tasks, events, deadlines, and meetings with regex search, weekly goals, and dark mode support.
 
-
-deployement link:  https://tinnah13.github.io/campus-life-planner/
-video link: https://docs.google.com/videos/d/1fe07lAvDCDmIudapykCGkMCdvl2SthtzS25XnXTmzrs/edit?scene=id.p#scene=id.p
 ## Languages Used
 - HTML5
 - CSS
