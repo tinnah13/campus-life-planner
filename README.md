@@ -2,7 +2,7 @@
 
 ## Overview
 A responsive web application that helps students organize tasks, events, deadlines, and meetings with regex search, weekly goals, and dark mode support.
-
+deployement link:  https://tinnah13.github.io/campus-life-planner/
 ## Languages Used
 - HTML5
 - CSS
